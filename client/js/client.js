@@ -149,7 +149,10 @@ $(document).ready(function () {
 
   function buildRecieved(message) {
     console.log('recieving: ', message.text);
-
+    if(document.hidden){
+      notifyMe(message.text);
+    }
+    
     $content.append(buildHTML.them(message.text));
     safeText(message.text);
     animateText();
@@ -168,13 +171,9 @@ $(document).ready(function () {
   messenger.onSend = buildSent;
   messenger.onRecieve = buildRecieved;
 
-  setTimeout(function () {
-    messenger.recieve('Hello there!');
-  }, 300);
-
-  setTimeout(function () {
-    messenger.recieve('Do you like me? I was made by Shang Wang...');
-  }, 600);
+  setTimeout(function() {
+    messenger.recieve('Chat whatever you want, this app won\'t record anything!');
+  }, 200);
 
   socket.on('chat message', function(msg){
     messenger.recieve(msg);
@@ -197,3 +196,29 @@ $(document).ready(function () {
     }
   });
 });
+
+function notifyMe(message) {
+  // Let's check if the browser supports notifications
+  if (!("Notification" in window)) {
+    alert("This browser does not support desktop notification");
+  }
+
+  // Let's check whether notification permissions have already been granted
+  else if (Notification.permission === "granted") {
+    // If it's okay let's create a notification
+    var notification = new Notification(message);
+  }
+
+  // Otherwise, we need to ask the user for permission
+  else if (Notification.permission !== 'denied') {
+    Notification.requestPermission(function (permission) {
+      // If the user accepts, let's create a notification
+      if (permission === "granted") {
+        var notification = new Notification(message);
+      }
+    });
+  }
+
+  // At last, if the user has denied notifications, and you 
+  // want to be respectful there is no need to bother them any more.
+}
