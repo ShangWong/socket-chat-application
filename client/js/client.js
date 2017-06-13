@@ -109,6 +109,10 @@ var BuildHTML = function () {
 }();
 
 $(document).ready(function () {
+  // set cookie when visit first time
+  // Tell the server your username
+  var username = setCookieWhenVisited();
+  socket.emit('userjoin', username);
 
   var messenger = new Messenger();
   var buildHTML = new BuildHTML();
@@ -163,7 +167,7 @@ $(document).ready(function () {
   function sendMessage() {
     var text = $input.val();
     messenger.send(text);
-    socket.emit('chat message', text); // emit the user input
+    socket.emit('chat', text); // emit the user input
     $input.val('');
     $input.focus();
   }
@@ -172,11 +176,16 @@ $(document).ready(function () {
   messenger.onRecieve = buildRecieved;
 
   setTimeout(function() {
-    messenger.recieve('Chat whatever you want, this app won\'t record anything!');
+    messenger.recieve('Chat whatever you want!');
   }, 200);
 
-  socket.on('chat message', function(msg){
+  socket.on('chat', function(msg){
     messenger.recieve(msg);
+  });
+
+  socket.on('userCount', function(msg){
+    console.log(msg);
+    $("#onlineCount").text('Online User : '+ msg);
   });
 
   $input.focus();
@@ -218,7 +227,69 @@ function notifyMe(message) {
       }
     });
   }
-
-  // At last, if the user has denied notifications, and you 
-  // want to be respectful there is no need to bother them any more.
 }
+
+function setCookieWhenVisited(){
+  var cookie = docCookies.getItem("username");
+  if(cookie === null){
+    var username = Math.random().toString(36).slice(-8);
+    docCookies.setItem("username", username);
+    return username;
+  }
+  return cookie;
+}
+
+/*\
+ |*|
+ |*|  :: cookies.js ::
+ |*|
+ |*|  A complete cookies reader/writer framework with full unicode support.
+ |*|
+ |*|  https://developer.mozilla.org/en-US/docs/DOM/document.cookie
+ |*|
+ |*|  Syntaxes:
+ |*|
+ |*|  * docCookies.setItem(name, value[, end[, path[, domain[, secure]]]])
+ |*|  * docCookies.getItem(name)
+ |*|  * docCookies.removeItem(name[, path])
+ |*|  * docCookies.hasItem(name)
+ |*|  * docCookies.keys()
+ |*|
+ \*/
+
+var docCookies = {
+  getItem: function (sKey) {
+    if (!sKey || !this.hasItem(sKey)) { return null; }
+    return unescape(document.cookie.replace(new RegExp("(?:^|.*;\\s*)" + escape(sKey).replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=\\s*((?:[^;](?!;))*[^;]?).*"), "$1"));
+  },
+  setItem: function (sKey, sValue, vEnd, sPath, sDomain, bSecure) {
+    if (!sKey || /^(?:expires|max\-age|path|domain|secure)$/i.test(sKey)) { return; }
+    var sExpires = "";
+    if (vEnd) {
+      switch (vEnd.constructor) {
+        case Number:
+          sExpires = vEnd === Infinity ? "; expires=Tue, 19 Jan 2038 03:14:07 GMT" : "; max-age=" + vEnd;
+          break;
+        case String:
+          sExpires = "; expires=" + vEnd;
+          break;
+        case Date:
+          sExpires = "; expires=" + vEnd.toGMTString();
+          break;
+      }
+    }
+    document.cookie = escape(sKey) + "=" + escape(sValue) + sExpires + (sDomain ? "; domain=" + sDomain : "") + (sPath ? "; path=" + sPath : "") + (bSecure ? "; secure" : "");
+  },
+  removeItem: function (sKey, sPath) {
+    if (!sKey || !this.hasItem(sKey)) { return; }
+    document.cookie = escape(sKey) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT" + (sPath ? "; path=" + sPath : "");
+  },
+  hasItem: function (sKey) {
+    return (new RegExp("(?:^|;\\s*)" + escape(sKey).replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=")).test(document.cookie);
+  },
+  keys: /* optional method: you can safely remove it! */ function () {
+    var aKeys = document.cookie.replace(/((?:^|\s*;)[^\=]+)(?=;|$)|^\s*|\s*(?:\=[^;]*)?(?:\1|$)/g, "").split(/\s*(?:\=[^;]*)?;\s*/);
+    for (var nIdx = 0; nIdx < aKeys.length; nIdx++) { aKeys[nIdx] = unescape(aKeys[nIdx]); }
+    return aKeys;
+  }
+};
